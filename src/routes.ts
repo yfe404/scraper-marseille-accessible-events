@@ -10,9 +10,9 @@ export function buildRouter() {
     router.addHandler('PLAYLIST', async ({ body, request, log, crawler }) => {
         const json = JSON.parse(Buffer.isBuffer(body) ? body.toString('utf-8') : (body as string));
 
-        const urls: string[] = (json.items ?? [])
+        const urls = (json.items ?? [])
             .map((it: any) => it.link as string)
-            .filter((u) => u?.startsWith('https://www.marseille'));
+            .filter((u: string) => u?.startsWith('https://www.marseille'));
 
         // add each Event page to the SAME queue with label EVENT_PAGE
         for (const url of urls) {
@@ -71,11 +71,12 @@ export function buildRouter() {
         };
 
         // drop null / empty values
-        Object.keys(rec).forEach((k) => {
+        (Object.keys(rec) as (keyof Event)[]).forEach((k) => {
             const v = rec[k];
-            if (v == null || (Array.isArray(v) && v.length === 0)) delete rec[k];
+            if (v == null || (Array.isArray(v) && v.length === 0)) {
+                delete (rec as any)[k]; // 👈 cast lets TS accept dynamic delete
+            }
         });
-
         await pushData(rec);
         log.info(`Saved event: ${rec.name}`, { url: request.url });
     });
