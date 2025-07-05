@@ -1,18 +1,18 @@
 {
     "actorSpecification": 1,
     "fields": {
-        "url": { "type": "string" },
-        "name": { "type": ["string", "null"] },
-        "description": { "type": "string" },
-        "startDate": { "type": "string", "format": "date" },
-        "endDate": { "type": "string", "format": "date" },
-        "venue": { "type": "string" },
-        "address": { "type": "string" },
-        "city": { "type": "string" },
-        "postalCode": { "type": "string" },
-        "latitude": { "type": "string" },
-        "longitude": { "type": "string" },
-        "images": { "type": "array", "items": { "type": "string", "format": "uri" } }
+        "url": "string",
+        "name": "string",
+        "description": "string",
+        "startDate": "date",
+        "endDate": "date",
+        "venue": "string",
+        "address": "string",
+        "city": "string",
+        "postalCode": "string",
+        "latitude": "number",
+        "longitude": "number",
+        "images": "array"
     },
     "views": {
         "overview": {
