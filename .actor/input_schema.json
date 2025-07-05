@@ -1,18 +1,17 @@
 {
-    "title": "CheerioCrawler Template",
+    "title": "Actor input",
+    "description": "Configuration for the Marseille-Tourisme events crawler.",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "startUrls": {
-            "title": "Start URLs",
-            "type": "array",
-            "description": "URLs to start with.",
-            "editor": "requestListSources",
-            "prefill": [
-                {
-                    "url": "https://apify.com"
-                }
-            ]
+        "maxEvents": {
+            "title": "Max number of events to fetch",
+            "type": "integer",
+            "description": "The crawler stops after it has processed this many events.",
+            "editor": "number",
+            "default": 10,
+            "prefill": 42,
+            "minimum": 1
         },
         "maxRequestsPerCrawl": {
             "title": "Max Requests per Crawl",
@@ -20,5 +19,6 @@
             "description": "Maximum number of requests that can be made by this crawler.",
             "default": 100
         }
-    }
+    },
+    "required": ["maxEvents", "maxRequestsPerCrawl"]
 }

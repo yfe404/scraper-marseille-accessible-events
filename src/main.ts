@@ -1,49 +1,78 @@
-// Apify SDK - toolkit for building Apify Actors (Read more at https://docs.apify.com/sdk/js/)
+// src/main.ts  – one-shot playlist POST with date facet
 import { Actor } from 'apify';
-// Crawlee - web scraping and browser automation library (Read more at https://crawlee.dev)
-import { CheerioCrawler, Dataset } from 'crawlee';
-
-// this is ESM project, and as such, it requires you to specify extensions in your relative imports
-// read more about this here: https://nodejs.org/docs/latest-v18.x/api/esm.html#mandatory-file-extensions
-// note that we need to use `.js` even when inside TS files
-// import { router } from './routes.js';
+import { CheerioCrawler, Request } from 'crawlee';
+import { randomUUID } from 'node:crypto';
+import dayjs from 'dayjs';
+import { buildRouter } from './routes.js';
 
 interface Input {
-    startUrls: {
-        url: string;
-        method?: 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE' | 'OPTIONS' | 'CONNECT' | 'PATCH';
-        headers?: Record<string, string>;
-        userData: Record<string, unknown>;
-    }[];
-    maxRequestsPerCrawl: number;
+  maxEvents?: number;     // how many items to request in one shot
+  monthsAhead?: number;   // how far into the future (default 3)
 }
 
-// The init() call configures the Actor for its environment. It's recommended to start every Actor with an init()
+const INFO_TYPE = '50253';
+const ENDPOINT  =
+  `https://www.marseille-tourisme.com/api/render/website_v2/` +
+  `marseille-tourisme/playlist/${INFO_TYPE}/fr_FR/json`;
+
+// wheelchair criteria facet
+const FACET_337753 = [
+  'accessible-en-fauteuil-roulant-avec-aide-1610584802810317056',
+  'accessible-en-fauteuil-roulant-en-autonomie-1608219246836411904',
+];
+
 await Actor.init();
 
-// Structure of input is defined in input_schema.json
-const { startUrls = ['https://apify.com'], maxRequestsPerCrawl = 100 } =
-    (await Actor.getInput<Input>()) ?? ({} as Input);
+/* ── INPUT ─────────────────────────────────────────────────────────────── */
+const {
+  maxEvents   = 1000,
+  monthsAhead = 3,
+} = (await Actor.getInput<Input>()) ?? {};
 
-const proxyConfiguration = await Actor.createProxyConfiguration();
+/* ── build POST body ───────────────────────────────────────────────────── */
+const today      = dayjs();                       // local TZ (Europe/Paris on Apify)
+const startISO   = today.startOf('day').format(); // 2025-07-05T00:00:00+02:00
+const endISO     = today
+  .add(monthsAhead, 'month')
+  .endOf('month')
+  .format();                                      // 2025-09-30T23:59:59+02:00
 
-const crawler = new CheerioCrawler({
-    proxyConfiguration,
-    maxRequestsPerCrawl,
-    requestHandler: async ({ enqueueLinks, request, $, log }) => {
-        log.info('enqueueing new URLs');
-        await enqueueLinks();
-
-        // Extract title from the page.
-        const title = $('title').text();
-        log.info(`${title}`, { url: request.loadedUrl });
-
-        // Save url and title to Dataset - a table-like storage.
-        await Dataset.pushData({ url: request.loadedUrl, title });
+const postBody = {
+  appType: 'website',
+  applyConfig: true,
+  size: maxEvents,          // one shot
+  start: 0,
+  confId: INFO_TYPE,
+  facets: {
+    '337748': {
+      start: startISO,
+      end: endISO,
+      availableOnly: true,
     },
+    '337753': FACET_337753,
+  },
+  randomSeed: randomUUID(),
+};
+
+/* ── seed RequestQueue with a single playlist request ─────────────────── */
+const rq = await Actor.openRequestQueue('playlist');
+const router = buildRouter();
+await rq.addRequest({
+    url: ENDPOINT,
+    method: 'POST',
+    payload: JSON.stringify(postBody),
+    headers: { 'Content-Type': 'application/json' },
+    label: 'PLAYLIST',
+    useExtendedUniqueKey: true
 });
 
-await crawler.run(startUrls);
+/* ── run crawler with external router (routes.ts) ──────────────────────── */
+const crawler = new CheerioCrawler({
+  requestQueue: rq,
+  maxConcurrency: 10,
+   requestHandler: router,
+});
 
-// Gracefully exit the Actor process. It's recommended to quit all Actors with an exit()
+await crawler.run();
 await Actor.exit();
+
