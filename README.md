@@ -1,74 +1,140 @@
-## TypeScript Crawlee & CheerioCrawler template
+# 🧭 Scraper — Marseille Accessible Events
 
-A template example built with [Crawlee](https://crawlee.dev/) to scrape data from a website using [Cheerio](https://cheerio.js.org/) wrapped into [CheerioCrawler](https://crawlee.dev/api/cheerio-crawler/class/CheerioCrawler).
+Crawlee + TypeScript actor that fetches the **accessible-events playlist** from the official
+Marseille-Tourisme API, then visits every event page, parses its
+`application/ld+json` schema and stores a clean, flat **Event** record to
+an Apify dataset.
 
-## Included features
+| Stack | Why |
+|-------|-----|
+| **Apify SDK v3** | Cloud-ready actor runtime, key-value stores & datasets |
+| **Crawlee 3 · CheerioCrawler** | Fast HTTP/HTML scraping with built-in queue |
+| **TypeScript** | Strong typing (see `src/types.ts → Event`) |
+| **dayjs** | Elegant date maths for the playlist facet |
 
-- **[Apify SDK](https://docs.apify.com/sdk/js)** - toolkit for building [Actors](https://apify.com/actors)
-- **[Crawlee](https://crawlee.dev/)** - web scraping and browser automation library
-- **[Input schema](https://docs.apify.com/platform/actors/development/input-schema)** - define and easily validate a schema for your Actor's input
-- **[Dataset](https://docs.apify.com/sdk/python/docs/concepts/storages#working-with-datasets)** - store structured data where each object stored has the same attributes
-- **[Cheerio](https://cheerio.js.org/)** - a fast, flexible & elegant library for parsing and manipulating HTML and XML
+---
 
-## How it works
+## ✨ Features
 
-This code is a TypeScript script that uses [Crawlee CheerioCrawler](https://crawlee.dev/api/cheerio-crawler/class/CheerioCrawler) framework to crawl a website and extract the data from the crawled URLs with Cheerio. It then stores the website titles in a dataset.
+* **One-shot playlist POST** – size =`maxEvents`, start =`0`.
+* Dynamic **date window facet**
+  `start = today 00:00`, `end = today + monthsAhead (end of month)`.
+* Only events with **wheelchair criteria** are requested.
+* Every event page is fetched with concurrency 10.
+* Extracts title, description, dates, venue, geo & images from the
+  schema graph, **deduplicating** overlapping WebPage/Event fields.
+* Output dataset contains tidy `Event` objects (see schema below).
 
-- The crawler starts with URLs provided from the input `startUrls` field defined by the input schema. Number of scraped pages is limited by `maxPagesPerCrawl` field from input schema.
-- The crawler uses `requestHandler` for each URL to extract the data from the page with the Cheerio library and to save the title and URL of each page to the dataset. It also logs out each result that is being saved.
+---
 
-## Resources
+## 📦 Project structure
 
-- [Video tutorial](https://www.youtube.com/watch?v=yTRHomGg9uQ) on building a scraper using CheerioCrawler
-- [Written tutorial](https://docs.apify.com/academy/web-scraping-for-beginners/challenge) on building a scraper using CheerioCrawler
-- [Web scraping with Cheerio in 2023](https://blog.apify.com/web-scraping-with-cheerio/)
-- How to [scrape a dynamic page](https://blog.apify.com/what-is-a-dynamic-page/) using Cheerio
-- [TypeScript vs. JavaScript: which to use for web scraping?](https://blog.apify.com/typescript-vs-javascript-crawler/)
-- [Integration with Zapier](https://apify.com/integrations), Make, Google Drive and others
-- [Video guide on getting scraped data using Apify API](https://www.youtube.com/watch?v=ViYYDHSBAKM)
-- A short guide on how to build web scrapers using code templates:
-
-[web scraper template](https://www.youtube.com/watch?v=u-i-Korzf8w)
-
-
-## Getting started
-
-For complete information [see this article](https://docs.apify.com/platform/actors/development#build-actor-locally). To run the Actor use the following command:
-
-```bash
-apify run
 ```
 
-## Deploy to Apify
+src/
+main.ts          ⇠ actor entry – seeds playlist POST & starts crawler
+routes.ts        ⇠ Cheerio router (PLAYLIST  +  EVENT\_PAGE)
+types.ts         ⇠ export interface Event
+package.json
+README.md          ⇠ you are here
+apify.json         ⇠ actor manifest
+INPUT\_SCHEMA.json  ⇠ UI + validation for actor input
 
-### Connect Git repository to Apify
+````
 
-If you've created a Git repository for the project, you can easily connect to Apify:
+---
 
-1. Go to [Actor creation page](https://console.apify.com/actors/new)
-2. Click on **Link Git Repository** button
+## 🔧 Input
 
-### Push project on your local machine to Apify
+| Field | Type | Default | Prefill | Description |
+|-------|------|---------|---------|-------------|
+| **maxEvents** | integer | 1000 | 42 | Max number of events to request in the playlist POST |
+| **monthsAhead** | integer | 3 | – | Date-window length (today → today + N months) |
 
-You can also deploy the project on your local machine to Apify without the need for the Git repository.
+`INPUT_SCHEMA.json` enforces both fields; `maxEvents` is **required**.
 
-1. Log in to Apify. You will need to provide your [Apify API Token](https://console.apify.com/account/integrations) to complete this action.
+### Example `input.json`
 
-    ```bash
-    apify login
-    ```
+```json
+{
+  "maxEvents": 42,
+  "monthsAhead": 3
+}
+````
 
-2. Deploy your Actor. This command will deploy and build the Actor on the Apify Platform. You can find your newly created Actor under [Actors -> My Actors](https://console.apify.com/actors?tab=my).
+---
 
-    ```bash
-    apify push
-    ```
+## ▶️ Run locally
 
-## Documentation reference
+```bash
+# install deps
+npm install
 
-To learn more about Apify and Actors, take a look at the following resources:
+# optional: build once
+npm run build
 
-- [Apify SDK for JavaScript documentation](https://docs.apify.com/sdk/js)
-- [Apify SDK for Python documentation](https://docs.apify.com/sdk/python)
-- [Apify Platform documentation](https://docs.apify.com/platform)
-- [Join our developer community on Discord](https://discord.com/invite/jyEM2PRvMU)
+# run with the example input
+apify run -i input.json    # or  npm start
+```
+
+Add `--purge` to clear previous datasets / queues:
+
+```bash
+apify run --purge -i input.json
+```
+
+---
+
+## 🗂 Output dataset (Event)
+
+```ts
+interface Event {
+  url: string;             // canonical event URL
+  name: string | null;
+  description?: string;
+  startDate?: string;      // ISO YYYY-MM-DD
+  endDate?: string;
+  venue?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  latitude?: string;
+  longitude?: string;
+  images?: string[];
+}
+```
+
+Empty / duplicate fields are removed before the record is pushed.
+
+---
+
+## 🔑 Environment variables
+
+None.
+If you route traffic through the Apify proxy, set it in **`apify.json`**
+or export `APIFY_PROXY_PASSWORD`.
+
+---
+
+## 🗺️ High-level flow
+
+```text
+Input → build POST body ─┐
+                         │
+        ┌─────────────── CheerioCrawler ────────────────┐
+        │                                               │
+   PLAYLIST handler                           EVENT_PAGE handler
+  • parse JSON                                 • parse LD+JSON
+  • enqueue https:// links (label:EVENT_PAGE)  • build typed Event
+        │                                               │
+        └─► RequestQueue 'playlist' ◄───────────────────┘
+                         │
+                    Apify Dataset  ←─── Event records
+```
+
+---
+
+## 📝 License
+
+MIT © 2025 yfe404
+
