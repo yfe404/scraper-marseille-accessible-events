@@ -1,12 +1,12 @@
 {
-	"actorSpecification": 1,
-	"name": "scraper-marseille-accessible-events",
-	"title": "Project Cheerio Crawler Typescript",
-	"description": "Crawlee and Cheerio project in typescript.",
-	"version": "0.0",
-	"meta": {
-		"templateId": "ts-crawlee-cheerio"
-	},
-	"input": "./input_schema.json",
-	"dockerfile": "../Dockerfile"
+    "actorSpecification": 1,
+    "name": "scraper-marseille-accessible-events",
+    "title": "Project Cheerio Crawler Typescript",
+    "description": "Crawlee and Cheerio project in typescript.",
+    "version": "0.0",
+    "meta": {
+        "templateId": "ts-crawlee-cheerio"
+    },
+    "input": "./input_schema.json",
+    "dockerfile": "../Dockerfile"
 }
