@@ -1,0 +1,55 @@
+{
+    "actorSpecification": 1,
+    "fields": {
+        "url": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "description": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
+        "venue": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "postalCode": { "type": "string" },
+        "latitude": { "type": "string" },
+        "longitude": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string", "format": "uri" } }
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": [
+                    "url",
+                    "name",
+                    "description",
+                    "startDate",
+                    "endDate",
+                    "venue",
+                    "address",
+                    "city",
+                    "postalCode",
+                    "latitude",
+                    "longitude",
+                    "images"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "url": { "label": "Event link", "format": "link" },
+                    "name": { "label": "Title", "format": "text" },
+                    "description": { "label": "Summary", "format": "text" },
+                    "startDate": { "label": "Start", "format": "date" },
+                    "endDate": { "label": "End", "format": "date" },
+                    "venue": { "label": "Venue", "format": "text" },
+                    "address": { "label": "Address", "format": "text" },
+                    "city": { "label": "City", "format": "text" },
+                    "postalCode": { "label": "ZIP", "format": "text" },
+                    "latitude": { "label": "Lat", "format": "number" },
+                    "longitude": { "label": "Lng", "format": "number" },
+                    "images": { "label": "Images", "format": "array" }
+                }
+            }
+        }
+    }
+}
