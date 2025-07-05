@@ -20,7 +20,6 @@ an Apify dataset.
 * Dynamic **date window facet**
   `start = today 00:00`, `end = today + monthsAhead (end of month)`.
 * Only events with **wheelchair criteria** are requested.
-* Every event page is fetched with concurrency 10.
 * Extracts title, description, dates, venue, geo & images from the
   schema graph, **deduplicating** overlapping WebPage/Event fields.
 * Output dataset contains tidy `Event` objects (see schema below).
