@@ -1,28 +1,54 @@
 import { createCheerioRouter } from 'crawlee';
-import { Event } from './types.js';
+
+import type { Event } from './types.js';
 
 export function buildRouter() {
     const router = createCheerioRouter();
 
-    /* ── PLAYLIST JSON handler ─────────────────────────────────────── */
-
-    // routes.ts  – PLAYLIST handler
+    // routes.ts – PLAYLIST handler (paginate until total)
     router.addHandler('PLAYLIST', async ({ body, request, log, crawler }) => {
         const json = JSON.parse(Buffer.isBuffer(body) ? body.toString('utf-8') : (body as string));
+        const items: any[] = json.items ?? [];
+        const totalFromApi = Number(json.playlist?.total);
+        const total = Number.isFinite(totalFromApi) ? totalFromApi : items.length;
 
-        const urls = (json.items ?? [])
-            .map((it: any) => it.link as string)
-            .filter((u: string) => u?.startsWith('https://www.marseille'));
+        // enqueue EVENT pages
+        const base = new URL(request.url);
+        const urls = [
+            ...new Set(
+                (items.map((it: any) => it?.link).filter(Boolean) as string[]).map((u) => new URL(u, base).toString()),
+            ),
+        ];
+        await crawler.addRequests(urls.map((url) => ({ url, label: 'EVENT_PAGE' })));
 
-        // add each Event page to the SAME queue with label EVENT_PAGE
-        for (const url of urls) {
+        // read original POST
+        let orig: any = {};
+        try {
+            orig = JSON.parse((request.payload as string) ?? '{}');
+        } catch {}
+
+        const start = Number(orig?.start ?? 0) || 0;
+        const nextStart = start + items.length; // advance by what we actually received
+        const cap = total; // 👈 fetch everything reported by the API
+
+        log.info(
+            `[PLAYLIST] total=${total} received=${items.length} start=${start} cap=${cap} enqEvents=${urls.length} | ${request.url}`,
+        );
+
+        if (items.length > 0 && nextStart < cap) {
+            const nextPayload = { ...orig, start: nextStart };
             await crawler.requestQueue!.addRequest({
-                url,
-                label: 'EVENT_PAGE',
+                url: request.url,
+                method: 'POST',
+                payload: JSON.stringify(nextPayload),
+                headers: { 'Content-Type': 'application/json' },
+                label: 'PLAYLIST',
+                useExtendedUniqueKey: true, // dedupe by URL+payload+headers
             });
+            log.info(`[PLAYLIST] Paginating: next start=${nextStart}/${cap}`);
+        } else {
+            log.info(`[PLAYLIST] Pagination done (start=${start}, items=${items.length}).`);
         }
-
-        log.info(`[PLAYLIST] total=${json.playlist?.total ?? 'n/a'} ` + `enqueued=${urls.length} | ${request.url}`);
     });
 
     // ────────────────────────────────────────────────────────────────

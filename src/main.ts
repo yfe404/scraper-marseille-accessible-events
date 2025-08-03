@@ -1,8 +1,10 @@
 // src/main.ts  – one-shot playlist POST with date facet
+import { randomUUID } from 'node:crypto';
+
 import { Actor } from 'apify';
 import { CheerioCrawler, Request } from 'crawlee';
-import { randomUUID } from 'node:crypto';
 import dayjs from 'dayjs';
+
 import { buildRouter } from './routes.js';
 
 interface Input {
@@ -48,7 +50,7 @@ const postBody = {
 };
 
 /* ── seed RequestQueue with a single playlist request ─────────────────── */
-const rq = await Actor.openRequestQueue('playlist');
+const rq = await Actor.openRequestQueue();
 const router = buildRouter();
 await rq.addRequest({
     url: ENDPOINT,
@@ -62,7 +64,6 @@ await rq.addRequest({
 /* ── run crawler with external router (routes.ts) ──────────────────────── */
 const crawler = new CheerioCrawler({
     requestQueue: rq,
-    maxConcurrency: 10,
     requestHandler: router,
 });
 
