@@ -12,29 +12,41 @@ export function buildRouter() {
         const totalFromApi = Number(json.playlist?.total);
         const total = Number.isFinite(totalFromApi) ? totalFromApi : items.length;
 
-        // enqueue EVENT pages
-        const base = new URL(request.url);
-        const urls = [
-            ...new Set(
-                (items.map((it: any) => it?.link).filter(Boolean) as string[]).map((u) => new URL(u, base).toString()),
-            ),
-        ];
-        await crawler.addRequests(urls.map((url) => ({ url, label: 'EVENT_PAGE' })));
-
-        // read original POST
+        // read original POST to get requested size (= maxEvents)
         let orig: any = {};
         try {
             orig = JSON.parse((request.payload as string) ?? '{}');
         } catch {}
-
         const start = Number(orig?.start ?? 0) || 0;
-        const nextStart = start + items.length; // advance by what we actually received
-        const cap = total; // 👈 fetch everything reported by the API
+        const requestedSize = Number(orig?.size);
+        const cap = Number.isFinite(requestedSize) ? Math.min(total, requestedSize) : total;
+
+        // how many we still want from THIS page
+        const remaining = Math.max(cap - start, 0);
+
+        // take only up to `remaining` items from this page
+        const pageSlice = remaining > 0 ? items.slice(0, remaining) : [];
+
+        // enqueue EVENT pages (normalize + dedupe)
+        const base = new URL(request.url);
+        const urls = [
+            ...new Set(
+                pageSlice
+                    .map((it: any) => it?.link)
+                    .filter(Boolean)
+                    .map((u: string) => new URL(u, base).toString()),
+            ),
+        ];
+
+        await crawler.addRequests(urls.map((url) => ({ url, label: 'EVENT_PAGE' })));
 
         log.info(
-            `[PLAYLIST] total=${total} received=${items.length} start=${start} cap=${cap} enqEvents=${urls.length} | ${request.url}`,
+            `[PLAYLIST] total=${total} requested=${requestedSize ?? 'all'} start=${start} received=${items.length} ` +
+                `enqueuedThisPage=${urls.length} cap=${cap} | ${request.url}`,
         );
 
+        // paginate: advance by what the server returned, but stop when we reach `cap`
+        const nextStart = start + items.length;
         if (items.length > 0 && nextStart < cap) {
             const nextPayload = { ...orig, start: nextStart };
             await crawler.requestQueue!.addRequest({
@@ -43,7 +55,7 @@ export function buildRouter() {
                 payload: JSON.stringify(nextPayload),
                 headers: { 'Content-Type': 'application/json' },
                 label: 'PLAYLIST',
-                useExtendedUniqueKey: true, // dedupe by URL+payload+headers
+                useExtendedUniqueKey: true,
             });
             log.info(`[PLAYLIST] Paginating: next start=${nextStart}/${cap}`);
         } else {
