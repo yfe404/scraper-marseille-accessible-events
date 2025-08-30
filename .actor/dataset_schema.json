@@ -50,7 +50,7 @@
                     "latitude": { "label": "Lat", "format": "number" },
                     "longitude": { "label": "Lng", "format": "number" },
                     "images": { "label": "Images", "format": "array" },
-                    "accessibility": { "label": "Accessibility", "format": "text"}.
+                    "accessibility": { "label": "Accessibility", "format": "text"}
                 }
             }
         }
