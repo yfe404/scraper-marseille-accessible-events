@@ -12,7 +12,8 @@
         "postalCode": "string",
         "latitude": "number",
         "longitude": "number",
-        "images": "array"
+        "images": "array",
+        "accessibility": "string",
     },
     "views": {
         "overview": {
@@ -30,7 +31,8 @@
                     "postalCode",
                     "latitude",
                     "longitude",
-                    "images"
+                    "images",
+                    "accessibility"
                 ]
             },
             "display": {
@@ -47,7 +49,8 @@
                     "postalCode": { "label": "ZIP", "format": "text" },
                     "latitude": { "label": "Lat", "format": "number" },
                     "longitude": { "label": "Lng", "format": "number" },
-                    "images": { "label": "Images", "format": "array" }
+                    "images": { "label": "Images", "format": "array" },
+                    "accessibility": { "label": "Accessibility", "format": "text"}.
                 }
             }
         }
