@@ -2,6 +2,50 @@ import { createCheerioRouter } from 'crawlee';
 
 import type { Event } from './types.js';
 
+function extractObjectLiteral(scriptText: string, varName: string): string | null {
+    // Find "const HwSheet ="
+    const assignIdx = scriptText.indexOf(`const ${varName} =`);
+    if (assignIdx === -1) return null;
+
+    // Find the first '{' after the assignment
+    const start = scriptText.indexOf('{', assignIdx);
+    if (start === -1) return null;
+
+    // Walk forward to find the matching closing brace '}' (handles nested braces)
+    let i = start;
+    let depth = 0;
+    let inStr = false;
+    let strQuote = '';
+    let prev = '';
+
+    while (i < scriptText.length) {
+        const ch = scriptText[i];
+
+        // rudimentary string skipping so braces inside strings don't break us
+        if (!inStr) {
+            if (ch === '"' || ch === "'" || ch === '`') {
+                inStr = true;
+                strQuote = ch;
+            } else if (ch === '{') {
+                depth++;
+            } else if (ch === '}') {
+                depth--;
+                if (depth === 0) {
+                    // include the closing brace
+                    const jsonLike = scriptText.slice(start, i + 1);
+                    return jsonLike;
+                }
+            }
+        } else if (ch === strQuote && prev !== '\\') {
+            inStr = false;
+            strQuote = '';
+        }
+        prev = ch;
+        i++;
+    }
+    return null;
+}
+
 export function buildRouter() {
     const router = createCheerioRouter();
 
@@ -70,6 +114,7 @@ export function buildRouter() {
     router.addHandler('EVENT_PAGE', async ({ $, request, pushData, log }) => {
         let eventNode: any = null;
         let webPageNode: any = null;
+        let accessibility: string;
 
         // iterate over every <script type="application/ld+json">
         $('script[type="application/ld+json"]').each((_, el) => {
@@ -87,6 +132,15 @@ export function buildRouter() {
                 /* ignore malformed JSON */
             }
         });
+
+        const scriptText = $('script[type="text/javascript"]')
+            .map((_, el) => $(el).html() || '')
+            .get()
+            .find((s) => s.includes('const HwSheet ='));
+
+        const objLiteral = extractObjectLiteral(scriptText ?? '', 'HwSheet');
+        const hwSheet = JSON.parse(objLiteral ?? '{}');
+        accessibility = hwSheet.servicesOffers;
 
         if (!eventNode) {
             log.warning('No Event schema found', { url: request.url });
@@ -106,7 +160,7 @@ export function buildRouter() {
             latitude: eventNode.location?.geo?.latitude,
             longitude: eventNode.location?.geo?.longitude,
             images: eventNode.image,
-            accessibility: eventNode.servicesOffers, // contains info about accessibility options for various disabilities
+            accessibility, // contains info about accessibility options for various disabilities
         };
 
         // drop null / empty values

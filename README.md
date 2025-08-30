@@ -5,24 +5,24 @@ Marseille-Tourisme API, then visits every event page, parses its
 `application/ld+json` schema and stores a clean, flat **Event** record to
 an Apify dataset.
 
-| Stack | Why |
-|-------|-----|
-| **Apify SDK v3** | Cloud-ready actor runtime, key-value stores & datasets |
-| **Crawlee 3 · CheerioCrawler** | Fast HTTP/HTML scraping with built-in queue |
-| **TypeScript** | Strong typing (see `src/types.ts → Event`) |
-| **dayjs** | Elegant date maths for the playlist facet |
+| Stack                          | Why                                                    |
+| ------------------------------ | ------------------------------------------------------ |
+| **Apify SDK v3**               | Cloud-ready actor runtime, key-value stores & datasets |
+| **Crawlee 3 · CheerioCrawler** | Fast HTTP/HTML scraping with built-in queue            |
+| **TypeScript**                 | Strong typing (see `src/types.ts → Event`)             |
+| **dayjs**                      | Elegant date maths for the playlist facet              |
 
 ---
 
 ## ✨ Features
 
-* **One-shot playlist POST** – size =`maxEvents`, start =`0`.
-* Dynamic **date window facet**
+- **One-shot playlist POST** – size =`maxEvents`, start =`0`.
+- Dynamic **date window facet**
   `start = today 00:00`, `end = today + monthsAhead (end of month)`.
-* Only events with **wheelchair criteria** are requested.
-* Extracts title, description, dates, venue, geo & images from the
+- Only events with **wheelchair criteria** are requested.
+- Extracts title, description, dates, venue, geo & images from the
   schema graph, **deduplicating** overlapping WebPage/Event fields.
-* Output dataset contains tidy `Event` objects (see schema below).
+- Output dataset contains tidy `Event` objects (see schema below).
 
 ---
 
@@ -39,16 +39,16 @@ README.md          ⇠ you are here
 apify.json         ⇠ actor manifest
 INPUT\_SCHEMA.json  ⇠ UI + validation for actor input
 
-````
+```
 
 ---
 
 ## 🔧 Input
 
-| Field | Type | Default | Prefill | Description |
-|-------|------|---------|---------|-------------|
-| **maxEvents** | integer | 1000 | 42 | Max number of events to request in the playlist POST |
-| **monthsAhead** | integer | 3 | – | Date-window length (today → today + N months) |
+| Field           | Type    | Default | Prefill | Description                                          |
+| --------------- | ------- | ------- | ------- | ---------------------------------------------------- |
+| **maxEvents**   | integer | 1000    | 42      | Max number of events to request in the playlist POST |
+| **monthsAhead** | integer | 3       | –       | Date-window length (today → today + N months)        |
 
 `INPUT_SCHEMA.json` enforces both fields; `maxEvents` is **required**.
 
@@ -56,10 +56,10 @@ INPUT\_SCHEMA.json  ⇠ UI + validation for actor input
 
 ```json
 {
-  "maxEvents": 42,
-  "monthsAhead": 3
+    "maxEvents": 42,
+    "monthsAhead": 3
 }
-````
+```
 
 ---
 
@@ -88,18 +88,18 @@ apify run --purge -i input.json
 
 ```ts
 interface Event {
-  url: string;             // canonical event URL
-  name: string | null;
-  description?: string;
-  startDate?: string;      // ISO YYYY-MM-DD
-  endDate?: string;
-  venue?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  latitude?: string;
-  longitude?: string;
-  images?: string[];
+    url: string; // canonical event URL
+    name: string | null;
+    description?: string;
+    startDate?: string; // ISO YYYY-MM-DD
+    endDate?: string;
+    venue?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    latitude?: string;
+    longitude?: string;
+    images?: string[];
 }
 ```
 
@@ -136,4 +136,3 @@ Input → build POST body ─┐
 ## 📝 License
 
 MIT © 2025 yfe404
-
