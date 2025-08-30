@@ -106,6 +106,7 @@ export function buildRouter() {
             latitude: eventNode.location?.geo?.latitude,
             longitude: eventNode.location?.geo?.longitude,
             images: eventNode.image,
+            accessibility: eventNode.servicesOffers, // contains info about accessibility options for various disabilities
         };
 
         // drop null / empty values
