@@ -11,4 +11,5 @@ export interface Event {
     latitude?: string;
     longitude?: string;
     images?: string[];
+    accessibility?: string;
 }
