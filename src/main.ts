@@ -18,7 +18,7 @@ const ENDPOINT =
 
 // wheelchair criteria facet
 const FACET_337753 = [
-    'accessible-en-fauteuil-roulant-avec-aide-1610584802810317056',
+//    'accessible-en-fauteuil-roulant-avec-aide-1610584802810317056',
     'accessible-en-fauteuil-roulant-en-autonomie-1608219246836411904',
 ];
 
