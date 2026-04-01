@@ -71,22 +71,35 @@ export function buildRouter() {
         // take only up to `remaining` items from this page
         const pageSlice = remaining > 0 ? items.slice(0, remaining) : [];
 
-        // enqueue EVENT pages (normalize + dedupe)
+        // enqueue EVENT pages (normalize + dedupe) or SHEET_API for items without link
         const base = new URL(request.url);
-        const urls = [
-            ...new Set(
-                pageSlice
-                    .map((it: any) => it?.link)
-                    .filter(Boolean)
-                    .map((u: string) => new URL(u, base).toString()),
-            ),
-        ];
+        const eventPageRequests: { url: string; label: string }[] = [];
 
-        await crawler.addRequests(urls.map((url) => ({ url, label: 'EVENT_PAGE' })));
+        for (const it of pageSlice) {
+            if (it?.link) {
+                const url = new URL(it.link, base).toString();
+                eventPageRequests.push({ url, label: 'EVENT_PAGE' });
+            } else if (it?.sheetId) {
+                const sheetUrl =
+                    `https://www.marseille-tourisme.com/api/render/website_v2/` +
+                    `marseille-tourisme/sheet/${it.sheetId}/fr_FR/json`;
+                eventPageRequests.push({ url: sheetUrl, label: 'SHEET_API' });
+            }
+        }
+
+        // dedupe by URL
+        const seen = new Set<string>();
+        const deduped = eventPageRequests.filter((r) => {
+            if (seen.has(r.url)) return false;
+            seen.add(r.url);
+            return true;
+        });
+
+        await crawler.addRequests(deduped);
 
         log.info(
             `[PLAYLIST] total=${total} requested=${requestedSize ?? 'all'} start=${start} received=${items.length} ` +
-                `enqueuedThisPage=${urls.length} cap=${cap} | ${request.url}`,
+                `enqueuedThisPage=${deduped.length} cap=${cap} | ${request.url}`,
         );
 
         // paginate: advance by what the server returned, but stop when we reach `cap`
@@ -172,6 +185,51 @@ export function buildRouter() {
         });
         await pushData(rec);
         log.info(`Saved event: ${rec.name}`, { url: request.url });
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // SHEET_API  – fallback for items without a page link
+    // ────────────────────────────────────────────────────────────────
+
+    router.addHandler('SHEET_API', async ({ body, request, pushData, log }) => {
+        const json = JSON.parse(Buffer.isBuffer(body) ? body.toString('utf-8') : (body as string));
+        const fo = json.formated_object ?? {};
+
+        const eventNode: any = fo.microDataJSON ?? {};
+        if (!eventNode['@type'] && !eventNode.name) {
+            log.warning('No microDataJSON in sheet response', { url: request.url });
+            return;
+        }
+
+        // servicesOffers already structured as an object
+        const servicesOffers = fo.servicesOffers;
+        const accessibility = servicesOffers ? JSON.stringify(servicesOffers) : undefined;
+
+        const rec: Event = {
+            url: eventNode.url ?? request.url,
+            name: eventNode.name ?? fo.businessName ?? null,
+            description: eventNode.description ?? fo.description,
+            startDate: eventNode.startDate,
+            endDate: eventNode.endDate,
+            venue: eventNode.location?.name,
+            address: eventNode.location?.address?.streetAddress,
+            city: eventNode.location?.address?.addressLocality ?? fo.locality,
+            postalCode: eventNode.location?.address?.postalCode,
+            latitude: fo.geolocations?.latitude ?? eventNode.location?.geo?.latitude,
+            longitude: fo.geolocations?.longitude ?? eventNode.location?.geo?.longitude,
+            images: eventNode.image,
+            accessibility,
+        };
+
+        // drop null / empty values
+        (Object.keys(rec) as (keyof Event)[]).forEach((k) => {
+            const v = rec[k];
+            if (v == null || (Array.isArray(v) && v.length === 0)) {
+                delete (rec as any)[k];
+            }
+        });
+        await pushData(rec);
+        log.info(`Saved event (sheet API): ${rec.name}`, { url: request.url });
     });
 
     return router;

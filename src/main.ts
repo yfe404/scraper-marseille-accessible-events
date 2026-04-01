@@ -12,12 +12,12 @@ interface Input {
     monthsAhead?: number; // how far into the future (default 3)
 }
 
-const INFO_TYPE = '50253';
+const INFO_TYPE = '78894';
 const ENDPOINT =
     `https://www.marseille-tourisme.com/api/render/website_v2/` + `marseille-tourisme/playlist/${INFO_TYPE}/fr_FR/json`;
 
-// wheelchair criteria facet
-const FACET_337753 = [
+// wheelchair criteria facet (facet category 502470 = "Accessibilités")
+const FACET_502470 = [
 //    'accessible-en-fauteuil-roulant-avec-aide-1610584802810317056',
     'accessible-en-fauteuil-roulant-en-autonomie-1608219246836411904',
 ];
@@ -44,7 +44,7 @@ const postBody = {
             end: endISO,
             availableOnly: true,
         },
-        '337753': FACET_337753,
+        '502470': FACET_502470,
     },
     randomSeed: randomUUID(),
 };
